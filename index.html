@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>VMA Sales Tracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    button { margin-top: 10px; padding: 8px 15px; }
+    .remove-btn { background-color: #f44336; color: white; border: none; cursor: pointer; }
+    #status { margin-top: 20px; padding: 10px; border: 1px solid #ddd; display: none; }
+    .success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+    .error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+  </style>
+</head>
+<body>
+  <h2>VMA Sales Tracker - Cons</h2>
+  <form id="salesForm">
+    <table id="salesTable">
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>VA Name</th>
+          <th>Fan Username</th>
+          <th>USD Gross</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="salesBody">
+        </tbody>
+    </table>
+    <br>
+    <button type="button" onclick="addRow()">+ Add Row</button>
+    <button type="submit">Submit All</button>
+  </form>
+  <p id="status"></p>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxokstNDKjJoYjlw0zz3dcpGyMv4o1VqsxgwpxhF5CSZB5YIAoikO1xCUYPFlwwELAtmQ/exec";
+    const statusEl = document.getElementById("status");
+    const salesBody = document.getElementById("salesBody");
+    const salesForm = document.getElementById("salesForm");
+
+    function addRow() {
+      const newRow = document.createElement("tr");
+      newRow.innerHTML = `
+        <td>
+          <select name="model" required>
+            <option value="">Select</option>
+            <option value="Sophia">Sophia</option>
+            <option value="Mina">Mina</option>
+            <option value="Dao">Dao</option>
+          </select>
+        </td>
+        <td>
+          <select name="vaName" required>
+            <option value="">Select</option>
+            <option value="Joyce">Joyce</option>
+            <option value="Alyanna">Alyanna</option>
+            <option value="Angela">Angela</option>
+            <option value="Kim">Kim</option>
+            <option value="Samantha">Samantha</option>
+            <option value="Sammy">Sammy</option>
+          </select>
+        </td>
+        <td><input type="text" name="fanUsername" required></td>
+        <td><input type="number" name="usdGross" step="0.01" required></td>
+        <td><button type="button" class="remove-btn" onclick="removeRow(this)">❌</button></td>
+      `;
+      salesBody.appendChild(newRow);
+    }
+
+    function removeRow(btn) {
+      if (salesBody.rows.length > 1) {
+        btn.closest("tr").remove();
+      } else {
+        alert("You must have at least one row.");
+      }
+    }
+
+    function initializeForm() {
+      // Add one default row when the page loads
+      addRow();
+    }
+
+    salesForm.addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const rows = salesBody.querySelectorAll("tr");
+      const allData = [];
+
+      rows.forEach(row => {
+        const model = row.querySelector('select[name="model"]').value;
+        const vaName = row.querySelector('select[name="vaName"]').value;
+        const fanUsername = row.querySelector('input[name="fanUsername"]').value;
+        const usdGross = row.querySelector('input[name="usdGross"]').value;
+        
+        if (model && vaName && fanUsername && usdGross) {
+          allData.push({ model, vaName, fanUsername, usdGross });
+        }
+      });
+
+      if (allData.length === 0) {
+        statusEl.textContent = "Please fill in all fields for at least one row.";
+        statusEl.className = "error";
+        statusEl.style.display = "block";
+        return;
+      }
+
+      statusEl.textContent = "Submitting...";
+      statusEl.className = "";
+      statusEl.style.display = "block";
+
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          mode: "cors",
+          headers: { 
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*" 
+          },
+          body: JSON.stringify(allData)
+        });
+
+        const result = await res.json();
+
+        if (result.status === "success") {
+          statusEl.textContent = "Data submitted successfully!";
+          statusEl.className = "success";
+          salesBody.innerHTML = "";
+          addRow();
+        } else {
+          statusEl.textContent = "Error: " + result.message;
+          statusEl.className = "error";
+        }
+      } catch (err) {
+        statusEl.textContent = "Request failed: " + err;
+        statusEl.className = "error";
+      }
+    });
+
+    // Run this function when the page loads
+    window.onload = initializeForm;
+  </script>
+</body>
+</html>
